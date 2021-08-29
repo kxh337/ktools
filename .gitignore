@@ -15,4 +15,9 @@ local/**
 *.zip
 releases
 releases/*
-CMakeFiles/**
+**/CMakeFiles/**
+config.h
+
+# Build bianries
+ktech
+krane

@@ -1,7 +1,7 @@
 include(AddCompilerFlag)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -pedantic")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wno-pedantic")
 	AddCompilerFlag("-Wno-unused-local-typedefs" CXX_FLAGS CMAKE_CXX_FLAGS)
 	AddCompilerFlag("-Wno-long-long" CXX_FLAGS CMAKE_CXX_FLAGS)
 elseif(MSVC)

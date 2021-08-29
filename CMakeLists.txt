@@ -1,31 +1,29 @@
 cmake_minimum_required (VERSION 2.8.8)
 cmake_policy(SET CMP0043 NEW)
-Project(ktools CXX)
 
+project(ktools CXX)
 set(PACKAGE_VERSION_MAJOR 4)
 set(PACKAGE_VERSION_MINOR 4)
 set(PACKAGE_VERSION_PATCH 0)
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}")
-
-OPTION(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
-OPTION(BUNDLED_DEPENDENCIES "Build under the assumption dependencies will be bundled with the executable." OFF)
+option(DISABLE_CPU_EXTENSIONS "Disable CPU extensions (portable build)." OFF)
+option(BUNDLED_DEPENDENCIES "Build under the assumption dependencies will be bundled with the executable." OFF)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/out_of_source_build.cmake)
-ENSURE_OUT_OF_SOURCE_BUILD( "${PROJECT_SOURCE_DIR}/build" )
+ensure_out_of_source_build("${PROJECT_SOURCE_DIR}/build")
 
-ENABLE_LANGUAGE(C)
+enable_language(C)
 
+set(COMMON_INCLUDE_DIRS "")
+set(LINK_DIRS "")
+set(COMMON_LIBS "ktool_common" "squish" "pugixml")
 
-set( COMMON_INCLUDE_DIRS "" )
-set( LINK_DIRS "" )
-set( COMMON_LIBS "ktool_common" "squish" "pugixml" )
+set(ktech_LIBS "")
+set(krane_LIBS "")
 
-set( ktech_LIBS "" )
-set( krane_LIBS "" )
-
-
-list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" )
-list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/thirdparty" )
+# Add to search path for CMake Modules
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/thirdparty")
 
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
@@ -42,9 +40,7 @@ include(warnings)
 include(compiler_specific)
 include(OptimizeForArchitecture)
 
-
 set(CMAKE_BUILD_TYPE Release)
-
 
 if(NOT DISABLE_CPU_EXTENSIONS)
 	OptimizeForArchitecture()
@@ -53,70 +49,69 @@ if(BUNDLED_DEPENDENCIES)
 	add_definitions(-DBUNDLED_DEPENDENCIES=1)
 endif()
 
-
 add_subdirectory(lib)
 
-
-FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore REQUIRED)
-LIBFIND_PKG_CHECK_MODULES(Magick++_PKGCONF Magick++)
+find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore REQUIRED)
+libfind_pkg_check_modules(Magick++_PKGCONF Magick++)
 if("${Magick++_PKGCONF_CFLAGS}" STREQUAL "")
 	if("${ImageMagick_LIBRARIES}" MATCHES "HDRI")
-		add_definitions( "-DMAGICKCORE_HDRI_ENABLE=1" )
+		add_definitions("-DMAGICKCORE_HDRI_ENABLE=1")
 	else()
-		add_definitions( "-DMAGICKCORE_HDRI_ENABLE=0" )
+		add_definitions("-DMAGICKCORE_HDRI_ENABLE=0")
 	endif()
 	if("${ImageMagick_LIBRARIES}" MATCHES "Q16")
-		add_definitions( "-DMAGICKCORE_QUANTUM_DEPTH=16" )
+		add_definitions("-DMAGICKCORE_QUANTUM_DEPTH=16")
 	else()
-		add_definitions( "-DMAGICKCORE_QUANTUM_DEPTH=8" )
+		add_definitions("-DMAGICKCORE_QUANTUM_DEPTH=8")
 	endif()
 else()
 	foreach(f ${Magick++_PKGCONF_CFLAGS})
-		set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${f}" )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${f}")
 	endforeach()
 endif()
 foreach(f ${Magick++_PKGCONF_LDFLAGS})
-	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${f}" )
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${f}")
 endforeach()
-list( APPEND COMMON_INCLUDE_DIRS "${ImageMagick_INCLUDE_DIRS}" )
-list( APPEND COMMON_LIBS "${ImageMagick_LIBRARIES}" )
+list(APPEND COMMON_INCLUDE_DIRS "${ImageMagick_INCLUDE_DIRS}")
+list(APPEND COMMON_LIBS "${ImageMagick_LIBRARIES}")
 
 
-FIND_PACKAGE(LibZip)
+find_package(LibZip)
 if(LIBZIP_FOUND)
-	list( APPEND COMMON_INCLUDE_DIRS "${LIBZIP_INCLUDE_DIR}" )
-	list( APPEND COMMON_LIBS "${LIBZIP_LIBRARY}" )
+	list(APPEND COMMON_INCLUDE_DIRS "${LIBZIP_INCLUDE_DIR}")
+	list(APPEND COMMON_LIBS "${LIBZIP_LIBRARY}")
 
 	set(HAVE_LIBZIP 1)
 
-	FIND_PACKAGE(ZLIB)
+	find_package(ZLIB)
 	if(ZLIB_FOUND)
-		#list( APPEND COMMON_INCLUDE_DIRS "${ZLIB_INCLUDE_DIR}" )
-		list( APPEND COMMON_LIBS "${ZLIB_LIBRARY}" )
+		#list(APPEND COMMON_INCLUDE_DIRS "${ZLIB_INCLUDE_DIR}")
+		list(APPEND COMMON_LIBS "${ZLIB_LIBRARY}")
 	endif(ZLIB_FOUND)
 endif(LIBZIP_FOUND)
 
 
-CHECK_LIBRARY_EXISTS(m floor "" HAVE_MATH_LIB) 
+check_library_exists(m floor "" HAVE_MATH_LIB) 
 if(HAVE_MATH_LIB)
-	list( APPEND COMMON_LIBS "m" )
+	list(APPEND COMMON_LIBS "m")
 endif(HAVE_MATH_LIB)
 
-list( APPEND ktech_LIBS "${COMMON_LIBS}" )
-list( APPEND krane_LIBS "${COMMON_LIBS}" )
+list(APPEND ktech_LIBS "${COMMON_LIBS}")
+list(APPEND krane_LIBS "${COMMON_LIBS}")
 
 
-CHECK_INCLUDE_FILE_CXX (cstddef HAVE_CSTDDEF)
+check_include_file_cxx(cstddef HAVE_CSTDDEF)
 if(NOT HAVE_CSTDDEF)
-	CHECK_INCLUDE_FILE (stddef.h HAVE_STDDEF_H)
+	check_include_file(stddef.h HAVE_STDDEF_H)
 	if(NOT HAVE_STDDEF_H)
 		message(FATAL_ERROR "Failed to find cstddef or stddef.h header.")
 	endif()
 endif()
 #
-CHECK_INCLUDE_FILE (stdint.h HAVE_STDINT_H)
-CHECK_INCLUDE_FILE (inttypes.h HAVE_INTTYPES_H)
-CHECK_INCLUDE_FILE (sys/types.h HAVE_SYS_TYPES_H)
+check_include_file(stdint.h HAVE_STDINT_H)
+check_include_file(inttypes.h HAVE_INTTYPES_H)
+check_include_file(sys/types.h HAVE_SYS_TYPES_H)
+
 if(NOT HAVE_STDINT_H AND NOT HAVE_INTTYPES_H AND NOT HAVE_SYS_TYPES_H)
 	message(FATAL_ERROR "Failed to find a standard header defining integral types.")
 endif()
@@ -151,22 +146,22 @@ endif()
 #CHECK_TYPE_SIZE("std::stringstream" SSTREAM LANGUAGE CXX)
 #set(CMAKE_EXTRA_INCLUDE_FILES)
 #
-CHECK_TYPE_SIZE("long long" LONG_LONG)
+check_type_size("long long" LONG_LONG)
 #
-CHECK_SYMBOL_EXISTS("snprintf" "stdio.h" HAVE_SNPRINTF)
+check_symbol_exists("snprintf" "stdio.h" HAVE_SNPRINTF)
 if(NOT HAVE_SNPRINTF)
-	CHECK_SYMBOL_EXISTS("_snprintf" "stdio.h" HAVE__SNPRINTF)
+	check_symbol_exists("_snprintf" "stdio.h" HAVE__SNPRINTF)
 endif()
 #
 set(CMAKE_EXTRA_INCLUDE_FILES "sys/stat.h")
-CHECK_TYPE_SIZE("mode_t" MODE_T)
+check_type_size("mode_t" MODE_T)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 #
-CHECK_CXX_SOURCE_COMPILES (
+check_cxx_source_compiles (
   "int test (void *restrict x); int main (void) {return 0;}"
 	HAVE_RESTRICT) 
 if(NOT HAVE_RESTRICT)
-	CHECK_CXX_SOURCE_COMPILES (
+	check_cxx_source_compiles (
 	  "int test (void *__restrict x); int main (void) {return 0;}"
 		HAVE___RESTRICT) 
 	if(NOT HAVE___RESTRICT)
@@ -176,19 +171,19 @@ if(NOT HAVE_RESTRICT)
 	endif()
 endif()
 #
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+list(APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR})
 
 
 add_subdirectory(src)
 
 
-list( APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/common ${PROJECT_SOURCE_DIR}/lib )
-set( KTECH_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/ktech )
-set( KRANE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/krane )
-set( LIBKTOOL_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} )
+list(APPEND COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/common ${PROJECT_SOURCE_DIR}/lib)
+set(KTECH_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/ktech)
+set(KRANE_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src/krane)
+set(LIBKTOOL_INCLUDE_DIRS ${COMMON_INCLUDE_DIRS})
 
-link_directories( ${LINK_DIRS} )
+link_directories(${LINK_DIRS})
 
 # add_executable(<name> [WIN32] [MACOSX_BUNDLE] ...
 if(NOT WIN32)
@@ -200,12 +195,12 @@ else()
 endif()
 add_library(ktool_common STATIC ${ktool_common_SOURCES} ${ktool_common_HEADERS})
 
-target_link_libraries( ktech ${ktech_LIBS} )
-target_link_libraries( krane ${krane_LIBS} )
+target_link_libraries(ktech ${ktech_LIBS})
+target_link_libraries(krane ${krane_LIBS})
 
-set_property( TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}" )
-set_property( TARGET krane PROPERTY INCLUDE_DIRECTORIES "${KRANE_INCLUDE_DIRS}" )
-set_property( TARGET ktool_common PROPERTY INCLUDE_DIRECTORIES "${LIBKTOOL_INCLUDE_DIRS}" )
+set_property(TARGET ktech PROPERTY INCLUDE_DIRECTORIES "${KTECH_INCLUDE_DIRS}")
+set_property(TARGET krane PROPERTY INCLUDE_DIRECTORIES "${KRANE_INCLUDE_DIRS}")
+set_property(TARGET ktool_common PROPERTY INCLUDE_DIRECTORIES "${LIBKTOOL_INCLUDE_DIRS}")
 
 if(MSVC)
    set_target_properties(ktech PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
@@ -228,8 +223,8 @@ if(MSVC)
 endif(MSVC)
 
 
-INSTALL(TARGETS ktech RUNTIME DESTINATION bin)
-INSTALL(TARGETS krane RUNTIME DESTINATION bin)
+install(TARGETS ktech RUNTIME DESTINATION bin)
+install(TARGETS krane RUNTIME DESTINATION bin)
 
 # uninstall target
 configure_file(

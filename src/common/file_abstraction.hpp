@@ -17,7 +17,6 @@ namespace KTools {
 			ZIP,
 			STANDARD_IO,
 			XML_ATLAS,
-
 			UNKNOWN
 		};
 
